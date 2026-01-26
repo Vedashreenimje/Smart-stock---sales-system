@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg bg-white border-bottom border-light py-3 mb-5">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+            <div class="logo-square me-2">S</div>
+            <span class="fw-bold tracking-tight text-dark">SmartStock</span>
+        </a>
+        <div class="navbar-nav ms-auto align-items-center">
+            <span class="nav-link text-muted small fw-medium me-3">
+                👋 {{ username }}
+            </span>
+            <a class="btn btn-soft-dark btn-sm rounded-pill px-4" href="/logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="fw-bold text-dark mb-1">Category Management</h2>
+            <p class="text-muted small text-uppercase ls-2">Organize your product classifications</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-minimal alert-{{ 'success' if category == 'success' else 'danger' }} fade show border-0 shadow-sm mb-4">
+            <div class="d-flex align-items-center">
+                <span class="me-2">{{ '●' if category == 'success' else '○' }}</span>
+                {{ message }}
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-soft rounded-4 p-4 position-sticky" style="top: 20px;">
+                <h5 class="fw-bold text-dark mb-4">Add New Category</h5>
+                <form method="POST" action="/add_category">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase ls-1">Category Name *</label>
+                        <input type="text" class="form-control minimal-input" name="name" required placeholder="e.g. Electronics">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase ls-1">Description</label>
+                        <textarea class="form-control minimal-input" name="description" rows="3" placeholder="Brief details..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100 py-3 rounded-3 fw-bold">Create Category</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-soft rounded-4 overflow-hidden">
+                <div class="card-header bg-white py-3 px-4 border-bottom border-light">
+                    <h6 class="m-0 fw-bold text-dark text-uppercase ls-1">
+                        All Categories <span class="badge bg-soft-dark text-dark ms-2">{{ categories|length }}</span>
+                    </h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 minimal-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if categories %}
+                                {% for c in categories %}
+                                <tr>
+                                    <td class="ps-4 text-muted small">#{{ c.id }}</td>
+                                    <td>
+                                        <span class="fw-bold text-dark">{{ c.name }}</span>
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ c.description if c.description else '-' }}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if c.name != 'Uncategorized' %}
+                                        <a href="{{ url_for('delete_category', id=c.id) }}" 
+                                           class="btn-delete-minimal"
+                                           onclick="return confirm('⚠️ Warning: Deleting this category will move all its products to the \'Uncategorized\' group. Continue?')">
+                                            Delete
+                                        </a>
+                                        {% else %}
+                                        <span class="badge rounded-pill bg-light text-muted border px-3 fw-medium">System Default</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5">
+                                        <p class="text-muted mb-0">No categories added yet.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --dark-slate: #1a1c1e;
+        --soft-gray: #f8f9fa;
+        --border-color: #f1f3f5;
+    }
+
+    body { 
+        background-color: #fcfcfc; 
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: var(--dark-slate);
+    }
+
+    /* Custom Header Utility */
+    .ls-1 { letter-spacing: 0.5px; }
+    .ls-2 { letter-spacing: 1.5px; }
+    
+    .logo-square {
+        width: 32px; height: 32px; background: var(--dark-slate);
+        color: white; display: flex; align-items: center; justify-content: center;
+        border-radius: 8px; font-weight: 900;
+    }
+
+    /* Cards & Shadows */
+    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,0.03) !important; }
+    
+    /* Inputs */
+    .minimal-input {
+        background: var(--soft-gray);
+        border: 2px solid transparent;
+        border-radius: 10px;
+        padding: 10px 15px;
+        transition: all 0.2s;
+    }
+    .minimal-input:focus {
+        background: white; border-color: var(--dark-slate); box-shadow: none;
+    }
+
+    /* Table Styling */
+    .minimal-table thead th {
+        background: var(--soft-gray);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #868e96;
+        border: none;
+        padding: 15px 20px;
+    }
+    .minimal-table tbody td { border-bottom: 1px solid var(--border-color); padding: 18px 20px; }
+
+    /* Buttons */
+    .btn-dark { background: var(--dark-slate); border: none; }
+    .btn-dark:hover { transform: translateY(-1px); background: #000; }
+    
+    .btn-soft-dark { background: #f1f3f5; color: #495057; border: none; }
+    .btn-soft-dark:hover { background: #e9ecef; }
+    
+    .btn-delete-minimal {
+        color: #fa5252; text-decoration: none; font-size: 0.85rem; font-weight: 600;
+        padding: 6px 12px; border-radius: 6px; transition: 0.2s;
+    }
+    .btn-delete-minimal:hover { background: #fff5f5; }
+
+    /* Flash Alerts */
+    .alert-minimal { border-radius: 12px; font-weight: 500; }
+    .alert-success { background: #ebfbee; color: #2b8a3e; }
+    .alert-danger { background: #fff5f5; color: #c92a2a; }
+
+    .bg-soft-dark { background-color: #e9ecef; }
+</style>
+{% endblock %}

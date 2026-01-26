@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Stock - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            border-radius: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+        .btn-login:active {
+            transform: translateY(1px);
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        .form-control:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .alert {
+            border-radius: 10px;
+            border: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .store-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="login-card">
+                    <!-- Header -->
+                    <div class="login-header">
+                        <div class="store-icon">🏪</div>
+                        <h1 class="h3 mb-2">Smart Stock System</h1>
+                        <p class="mb-0 opacity-75">Inventory & Sales Management</p>
+                    </div>
+                    
+                    <!-- Messages/Alerts -->
+                    <div class="p-4 pb-0">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div class="p-4 pt-3">
+                        <form method="POST" action="/login" id="loginForm">
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="username" 
+                                       placeholder="Enter username"
+                                       required
+                                       autofocus>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label">Password</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       name="password" 
+                                       placeholder="Enter password"
+                                       required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-login w-100 mb-3">
+                                🔐 Login to Dashboard
+                            </button>
+                            
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    Demo Credentials: <strong>admin</strong> / <strong>admin123</strong>
+                                </small>
+                            </div>
+                        </form>
+                        
+                        <!-- Demo Info -->
+                        <div class="mt-4 pt-3 border-top">
+                            <h6 class="text-center mb-3">📋 Quick Demo Features</h6>
+                            <div class="row text-center">
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">📦 Product Management</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">💰 POS Billing</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">📊 Sales Reports</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <small class="text-muted">⚠️ Stock Alerts</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="text-center mt-3">
+                    <small class="text-white">
+                        Smart Stock System © 2025 | Made with ❤️ for PCACS
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Form submission animation
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Logging in...';
+            btn.disabled = true;
+            
+            // Optional: Add slight delay to show spinner
+            setTimeout(() => {
+                // Form will submit normally
+            }, 300);
+        });
+        
+        // Auto-focus username field
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('input[name="username"]').focus();
+        });
+        
+        // Alert auto-dismiss
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                setTimeout(() => bsAlert.close(), 5000);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

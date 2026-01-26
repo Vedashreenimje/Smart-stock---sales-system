@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt #{{ sale.invoice_no }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Courier New', monospace; }
+        @media print {
+            .no-print { display: none; }
+            body { font-size: 12px; padding: 0; }
+            .container { width: 80mm; }
+        }
+        .receipt-header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .receipt-footer { border-top: 2px dashed #000; padding-top: 10px; margin-top: 15px; text-align: center; }
+        .item-row { border-bottom: 1px dashed #ccc; padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <!-- Receipt Header -->
+        <div class="receipt-header">
+            <h4 class="mb-1">🏪 SMART STOCK SYSTEM</h4>
+            <p class="mb-1">Invoice: <strong>{{ sale.invoice_no }}</strong></p>
+            <p class="mb-1">Date: {{ sale.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p class="mb-0">Payment: {{ sale.payment_mode.upper() }}</p>
+        </div>
+        
+        <!-- Items -->
+        <div class="mb-3">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td class="text-end">{{ item.quantity }}</td>
+                        <td class="text-end">₹{{ item.unit_price }}</td>
+                        <td class="text-end">₹{{ item.subtotal }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-success">
+                        <th colspan="3" class="text-end">Total:</th>
+                        <th class="text-end">₹{{ sale.total_amount }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <!-- Receipt Footer -->
+        <div class="receipt-footer">
+            <p class="mb-1">Thank you for your business!</p>
+            <p class="mb-0 text-muted">Smart Stock System © 2025</p>
+        </div>
+        
+        <!-- Print Controls -->
+        <div class="text-center mt-4 no-print">
+            <button onclick="window.print()" class="btn btn-primary me-2">🖨️ Print Receipt</button>
+            <button onclick="window.close()" class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print on page load
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

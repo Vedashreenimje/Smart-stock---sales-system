@@ -1,0 +1,1009 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Main Content -->
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📦 Product Management</h2>
+            <p class="text-muted mb-0">Manage your inventory, add new products, track stock levels</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                ＋ Add Product
+            </button>
+            <a href="/categories" class="btn btn-outline-primary btn-lg">
+                🏷️ Manage Categories
+            </a>
+        </div>
+    </div>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'info' }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Product Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Search Products</label>
+                    <input type="text" class="form-control" id="searchProduct" placeholder="🔍 Name, ID...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Category</label>
+                    <select class="form-select" id="filterCategory">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Stock Status</label>
+                    <select class="form-select" id="filterStock">
+                        <option value="">All Stock</option>
+                        <option value="low">⚠️ Low Stock</option>
+                        <option value="critical">🔴 Critical Stock (≤ 2)</option>
+                        <option value="out">❌ Out of Stock</option>
+                        <option value="good">✅ Good Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary w-100" id="resetFilters">
+                            🔄 Reset
+                        </button>
+                        <button class="btn btn-outline-primary" id="refreshProducts">
+                            ↻
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Products Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start border-primary border-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-primary fs-4">📦</div>
+                        <div>
+                            <small class="text-muted d-block">Total Products</small>
+                            <h4 class="mb-0">{{ products|length }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start border-warning border-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-warning fs-4">⚠️</div>
+                        <div>
+                            <small class="text-muted d-block">Low Stock Items</small>
+                            <h4 class="mb-0" id="lowStockCount">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start border-danger border-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-danger fs-4">❌</div>
+                        <div>
+                            <small class="text-muted d-block">Out of Stock</small>
+                            <h4 class="mb-0" id="outOfStockCount">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start border-success border-4 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-success fs-4">💰</div>
+                        <div>
+                            <small class="text-muted d-block">Total Inventory Value</small>
+                            <h4 class="mb-0" id="totalInventoryValue">₹0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Products Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📋 All Products ({{ products|length }})</h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-success" id="exportProducts">
+                    📥 Export
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    🖨️ Print
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="productsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="60">ID</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Cost</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Min</th>
+                            <th>Status</th>
+                            <th>Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        {% set category_name = product.category_name or 'Uncategorized' %}
+                        {% set profit_per_unit = product.selling_price - product.purchase_price %}
+                        {% set inventory_value = product.stock_quantity * product.purchase_price %}
+                        {% set is_low_stock = product.stock_quantity <= product.min_stock_level %}
+                        {% set is_critical = product.stock_quantity <= 2 %}
+                        {% set is_out_of_stock = product.stock_quantity == 0 %}
+                        
+                        <tr class="product-row 
+                            {% if is_critical %}table-danger{% elif is_low_stock %}table-warning{% endif %}"
+                            data-id="{{ product.id }}"
+                            data-name="{{ product.name }}"
+                            data-category="{{ product.category_id }}"
+                            data-stock="{{ product.stock_quantity }}"
+                            data-min-stock="{{ product.min_stock_level }}"
+                            data-purchase="{{ product.purchase_price }}"
+                            data-selling="{{ product.selling_price }}"
+                            data-description="{{ product.description or '' }}">
+                            <td>
+                                <span class="badge bg-dark">#{{ product.id }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <div class="product-icon">📦</div>
+                                    </div>
+                                    <div>
+                                        <strong>{{ product.name }}</strong>
+                                        {% if product.description %}
+                                        <small class="text-muted d-block">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ category_name }}</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">Cost</small>
+                                <div class="fw-bold">₹{{ "%.2f"|format(product.purchase_price) }}</div>
+                            </td>
+                            <td>
+                                <small class="text-muted">Selling</small>
+                                <div class="fw-bold text-success">₹{{ "%.2f"|format(product.selling_price) }}</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        {% if is_out_of_stock %}
+                                        <span class="badge bg-danger">0</span>
+                                        {% elif is_critical %}
+                                        <span class="badge bg-danger">{{ product.stock_quantity }}</span>
+                                        {% elif is_low_stock %}
+                                        <span class="badge bg-warning">{{ product.stock_quantity }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">{{ product.stock_quantity }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        {% if is_out_of_stock %}
+                                        <small class="text-danger d-block">Out of Stock</small>
+                                        {% elif is_critical %}
+                                        <small class="text-danger d-block">Critical</small>
+                                        {% elif is_low_stock %}
+                                        <small class="text-warning d-block">Low Stock</small>
+                                        {% else %}
+                                        <small class="text-success d-block">In Stock</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ product.min_stock_level }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if profit_per_unit > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    ₹{{ "%.2f"|format(profit_per_unit) }}
+                                    <small class="opacity-75">/unit</small>
+                                </span>
+                                <small class="d-block text-muted">
+                                    {{ "%.1f"|format((profit_per_unit / product.purchase_price * 100) if product.purchase_price > 0 else 0) }}% margin
+                                </small>
+                            </td>
+                            <td>
+                                <div class="fw-bold">₹{{ "%.2f"|format(inventory_value) }}</div>
+                                <small class="text-muted">Inventory value</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-secondary ai-strategy-btn" 
+                                            data-id="{{ product.id }}" 
+                                            data-name="{{ product.name }}"
+                                            onclick="getAiPriceAdvice(this)"
+                                            title="AI Price Strategy">
+                                        🧠
+                                    </button>
+
+                                    <button class="btn btn-outline-primary update-stock-btn"
+                                            data-id="{{ product.id }}"
+                                            data-name="{{ product.name }}"
+                                            data-stock="{{ product.stock_quantity }}"
+                                            title="Update Stock">
+                                        📊
+                                    </button>
+                                    <button class="btn btn-outline-info edit-product-btn"
+                                            data-id="{{ product.id }}"
+                                            data-name="{{ product.name }}"
+                                            data-category="{{ product.category_id }}"
+                                            data-purchase="{{ product.purchase_price }}"
+                                            data-selling="{{ product.selling_price }}"
+                                            data-stock="{{ product.stock_quantity }}"
+                                            data-min-stock="{{ product.min_stock_level }}"
+                                            data-description="{{ product.description or '' }}"
+                                            title="Edit Product">
+                                        ✏️
+                                    </button>
+                                    {% if session.get('role') == 'admin' %}
+                                    <button class="btn btn-outline-danger delete-product-btn"
+                                            data-id="{{ product.id }}"
+                                            data-name="{{ product.name }}"
+                                            title="Delete Product">
+                                        🗑️
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Summary Stats -->
+            <div class="row mt-4 pt-3 border-top">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-primary fs-4">💰</div>
+                        <div>
+                            <small class="text-muted d-block">Total Inventory Value</small>
+                            <h5 class="mb-0" id="calculatedInventoryValue">Calculating...</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-success fs-4">📈</div>
+                        <div>
+                            <small class="text-muted d-block">Avg. Profit Margin</small>
+                            <h5 class="mb-0" id="avgProfitMargin">Calculating...</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-warning fs-4">⚠️</div>
+                        <div>
+                            <small class="text-muted d-block">Items Need Restock</small>
+                            <h5 class="mb-0" id="itemsNeedRestock">0</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 text-info fs-4">🏷️</div>
+                        <div>
+                            <small class="text-muted d-block">Categories Used</small>
+                            <h5 class="mb-0">{{ categories|length }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="empty-state-icon mb-4">
+                    <div class="fs-1 mb-3">📦</div>
+                    <h4 class="text-muted">No Products Yet</h4>
+                    <p class="text-muted mb-4">Add your first product to start managing inventory</p>
+                    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        ＋ Add Your First Product
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">➕ Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/add_product" id="addProductForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Name *</label>
+                            <input type="text" class="form-control" name="name" required 
+                                   placeholder="e.g., Blue Notebook, Chocolate Bar">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select class="form-select" name="category_id" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cost Price (₹) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" step="0.01" class="form-control" 
+                                       name="purchase_price" required min="0" value="0">
+                            </div>
+                            <small class="text-muted">What you pay the supplier</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Selling Price (₹) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" step="0.01" class="form-control" 
+                                       name="selling_price" required min="0" value="0">
+                            </div>
+                            <small class="text-muted">What customer pays</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Initial Stock Quantity *</label>
+                            <input type="number" class="form-control" name="stock_quantity" 
+                                   required min="0" value="10">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Minimum Stock Level</label>
+                            <input type="number" class="form-control" name="min_stock_level" 
+                                   min="1" value="5">
+                            <small class="text-muted">System will alert when stock goes below this</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" name="description" rows="2" 
+                                  placeholder="Product description, features, etc."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            💡 <strong>Tip:</strong> Add at least 5-10 products to test the system properly. 
+                            Include different categories for better reports.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitProductBtn">
+                        <span class="spinner-border spinner-border-sm d-none" id="addProductSpinner"></span>
+                        Add Product
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📊 Update Stock Level</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="updateStockForm">
+                <div class="modal-body">
+                    <input type="hidden" id="productId">
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <input type="text" class="form-control" id="productName" readonly>
+                        <small class="text-muted" id="productDetails"></small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Stock</label>
+                            <input type="number" class="form-control" id="currentStock" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Min Stock Level</label>
+                            <input type="number" class="form-control" id="minStockLevel" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Stock Quantity *</label>
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary" type="button" id="decreaseStock">-</button>
+                            <input type="number" class="form-control text-center" id="newStock" required min="0" value="0">
+                            <button class="btn btn-outline-secondary" type="button" id="increaseStock">+</button>
+                        </div>
+                        <small class="text-muted">Enter the total stock quantity (not the change)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Update (Optional)</label>
+                        <select class="form-select" id="updateReason">
+                            <option value="">Select reason</option>
+                            <option value="restock">Restock from supplier</option>
+                            <option value="adjustment">Stock adjustment</option>
+                            <option value="return">Customer return</option>
+                            <option value="damage">Damaged goods</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-warning" id="lowStockWarning" style="display: none;">
+                        ⚠️ This will put the product in low stock condition!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="updateStockBtn">
+                        Update Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">✏️ Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProductForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editProductId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Name *</label>
+                            <input type="text" class="form-control" id="editProductName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select class="form-select" id="editCategoryId" required>
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cost Price (₹) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" step="0.01" class="form-control" id="editPurchasePrice" required min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Selling Price (₹) *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" step="0.01" class="form-control" id="editSellingPrice" required min="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Stock</label>
+                            <input type="number" class="form-control" id="editStockQuantity" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Minimum Stock Level *</label>
+                            <input type="number" class="form-control" id="editMinStockLevel" min="1" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <small>⚠️ Changing prices will affect future sales but not existing ones.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveProductBtn">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">🗑️ Delete Product</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="fs-1 text-danger mb-3">⚠️</div>
+                    <h5>Are you sure you want to delete this product?</h5>
+                    <p class="text-muted" id="deleteProductName"></p>
+                    <div class="alert alert-danger">
+                        <strong>Warning:</strong> This action cannot be undone. All sales records for this product will remain, but you won't be able to sell it anymore.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    Delete Product
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom Styles */
+    .store-icon {
+        font-size: 1.5em;
+        animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+        border-left: 4px solid #ffc107;
+    }
+    .table-danger {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        border-left: 4px solid #dc3545;
+    }
+    .product-icon {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    .product-row {
+        transition: all 0.3s;
+    }
+    .product-row:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+
+<script>
+    // Calculate summary statistics (Updated for safety and better formatting)
+    function calculateSummaryStats() {
+        let lowStockCount = 0;
+        let outOfStockCount = 0;
+        let totalInventoryValue = 0;
+        let totalProfitMargin = 0;
+        let itemsWithMargin = 0;
+        let itemsNeedRestock = 0;
+        
+        document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+            // Use parseFloat/Int with fallback to 0 to prevent math errors
+            const stock = parseInt(row.dataset.stock) || 0;
+            const minStock = parseInt(row.dataset.minStock) || 0;
+            const purchasePrice = parseFloat(row.dataset.purchase) || 0;
+            const sellingPrice = parseFloat(row.dataset.selling) || 0;
+            
+            if (stock <= minStock && stock > 0) lowStockCount++;
+            if (stock === 0) outOfStockCount++;
+            if (stock <= minStock) itemsNeedRestock++;
+            
+            totalInventoryValue += (stock * purchasePrice);
+            
+            if (purchasePrice > 0) {
+                const margin = ((sellingPrice - purchasePrice) / purchasePrice) * 100;
+                totalProfitMargin += margin;
+                itemsWithMargin++;
+            }
+        });
+        
+        // Update the UI with proper Currency Formatting
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+        
+        document.getElementById('lowStockCount').textContent = lowStockCount;
+        document.getElementById('outOfStockCount').textContent = outOfStockCount;
+        document.getElementById('totalInventoryValue').textContent = formatter.format(totalInventoryValue);
+        document.getElementById('calculatedInventoryValue').textContent = formatter.format(totalInventoryValue);
+        document.getElementById('itemsNeedRestock').textContent = itemsNeedRestock;
+        
+        const avgMargin = itemsWithMargin > 0 ? (totalProfitMargin / itemsWithMargin) : 0;
+        document.getElementById('avgProfitMargin').textContent = avgMargin.toFixed(1) + '%';
+    }
+    
+    // Product Filtering
+    document.getElementById('searchProduct').addEventListener('input', filterProducts);
+    document.getElementById('filterCategory').addEventListener('change', filterProducts);
+    document.getElementById('filterStock').addEventListener('change', filterProducts);
+    document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    
+    function filterProducts() {
+        const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
+        const categoryFilter = document.getElementById('filterCategory').value;
+        const stockFilter = document.getElementById('filterStock').value;
+        
+        let visibleCount = 0;
+        
+        document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+            const productName = row.dataset.name.toLowerCase();
+            const productCategory = row.dataset.category;
+            const stockQuantity = parseInt(row.dataset.stock);
+            const minStock = parseInt(row.dataset.minStock);
+            
+            let show = true;
+            
+            if (searchTerm && !productName.includes(searchTerm)) show = false;
+            if (categoryFilter && productCategory !== categoryFilter) show = false;
+            
+            if (stockFilter === 'low' && (stockQuantity > minStock || stockQuantity === 0)) {
+                show = false;
+            } else if (stockFilter === 'critical' && stockQuantity > 2) {
+                show = false;
+            } else if (stockFilter === 'out' && stockQuantity > 0) {
+                show = false;
+            } else if (stockFilter === 'good' && (stockQuantity <= minStock || stockQuantity === 0)) {
+                show = false;
+            }
+            
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+        
+        const tableHeader = document.querySelector('.card-header h5');
+        if (tableHeader) {
+            tableHeader.textContent = `📋 All Products (${visibleCount})`;
+        }
+    }
+    
+    function resetFilters() {
+        document.getElementById('searchProduct').value = '';
+        document.getElementById('filterCategory').value = '';
+        document.getElementById('filterStock').value = '';
+        filterProducts();
+    }
+    
+    // Update Stock Modal Initialization
+    document.querySelectorAll('.update-stock-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.id;
+            const productName = this.dataset.name;
+            const currentStock = this.dataset.stock;
+            const row = this.closest('tr');
+            const minStock = row.dataset.minStock;
+            const purchasePrice = row.dataset.purchase;
+            const sellingPrice = row.dataset.selling;
+            
+            document.getElementById('productId').value = productId;
+            document.getElementById('productName').value = productName;
+            document.getElementById('currentStock').value = currentStock;
+            document.getElementById('newStock').value = currentStock;
+            document.getElementById('minStockLevel').value = minStock;
+            
+            document.getElementById('productDetails').textContent = 
+                `Cost: ₹${purchasePrice} | Selling: ₹${sellingPrice} | Min: ${minStock}`;
+            
+            const newStockInput = document.getElementById('newStock');
+            const warning = document.getElementById('lowStockWarning');
+            
+            function checkLowStock() {
+                const newStockVal = parseInt(newStockInput.value) || 0;
+                warning.style.display = (newStockVal <= minStock && newStockVal > 0) ? 'block' : 'none';
+            }
+            
+            newStockInput.addEventListener('input', checkLowStock);
+            checkLowStock();
+            
+            new bootstrap.Modal(document.getElementById('updateStockModal')).show();
+        });
+    });
+    
+    // Stock increment/decrement buttons
+    document.getElementById('increaseStock').addEventListener('click', function() {
+        const input = document.getElementById('newStock');
+        input.value = parseInt(input.value) + 1;
+        input.dispatchEvent(new Event('input'));
+    });
+    
+    document.getElementById('decreaseStock').addEventListener('click', function() {
+        const input = document.getElementById('newStock');
+        const current = parseInt(input.value) || 0;
+        if (current > 0) {
+            input.value = current - 1;
+            input.dispatchEvent(new Event('input'));
+        }
+    });
+    
+    // Update Stock Form Submission (Updated with Reason and better Fetch logic)
+    document.getElementById('updateStockForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const productId = document.getElementById('productId').value;
+        const newStock = document.getElementById('newStock').value;
+        const reason = document.getElementById('updateReason') ? document.getElementById('updateReason').value : "";
+        
+        const submitBtn = document.getElementById('updateStockBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Updating...';
+        submitBtn.disabled = true;
+        
+        const params = new URLSearchParams();
+        params.append('stock', newStock);
+        params.append('reason', reason);
+
+        fetch(`/update_stock/${productId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('updateStockModal')).hide();
+                showToast('✅ Stock updated successfully!', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            showToast(`❌ Update failed: ${error.message}`, 'danger');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+    
+    // Edit Product Modal
+    document.querySelectorAll('.edit-product-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const d = this.dataset;
+            document.getElementById('editProductId').value = d.id;
+            document.getElementById('editProductName').value = d.name;
+            document.getElementById('editCategoryId').value = d.category;
+            document.getElementById('editPurchasePrice').value = d.purchase;
+            document.getElementById('editSellingPrice').value = d.selling;
+            document.getElementById('editStockQuantity').value = d.stock;
+            document.getElementById('editMinStockLevel').value = d.minStock;
+            document.getElementById('editDescription').value = d.description;
+            
+            new bootstrap.Modal(document.getElementById('editProductModal')).show();
+        });
+    });
+    
+    // Edit Product Form Submission
+    document.getElementById('editProductForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const productId = document.getElementById('editProductId').value;
+        const submitBtn = document.getElementById('saveProductBtn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Saving...';
+        submitBtn.disabled = true;
+        
+        const formData = new URLSearchParams(new FormData(this));
+        
+        fetch(`/edit_product/${productId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editProductModal')).hide();
+                showToast('✅ Product updated successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(`❌ Error: ${data.error}`, 'danger');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            showToast('❌ Network error. Please try again.', 'danger');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
+    });
+    
+    // Delete Product logic
+    document.querySelectorAll('.delete-product-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = this.dataset.id;
+            const productName = this.dataset.name;
+            document.getElementById('deleteProductName').textContent = `"${productName}"`;
+            document.getElementById('confirmDeleteBtn').onclick = () => {
+                const deleteBtn = document.getElementById('confirmDeleteBtn');
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = 'Deleting...';
+                
+                fetch(`/delete_product/${productId}`, { method: 'DELETE' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) {
+                        showToast(`🗑️ Product deleted successfully!`, 'success');
+                        location.reload();
+                    } else {
+                        showToast(`❌ Error: ${data.error}`, 'danger');
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = 'Delete Product';
+                    }
+                });
+            };
+            new bootstrap.Modal(document.getElementById('deleteProductModal')).show();
+        });
+    });
+    
+    // Form submission loading state for Add Product
+    document.getElementById('addProductForm').addEventListener('submit', function() {
+        const btn = document.getElementById('submitProductBtn');
+        document.getElementById('addProductSpinner').classList.remove('d-none');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Adding...';
+    });
+    
+    // UI Helpers
+    document.getElementById('refreshProducts').addEventListener('click', () => location.reload());
+    document.getElementById('exportProducts').addEventListener('click', () => showToast('📥 Export feature coming soon!', 'info'));
+    
+    // Improved Toast Notification Function
+    function showToast(message, type = 'info') {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = '1100';
+            document.body.appendChild(container);
+        }
+
+        const toastId = 'toast-' + Date.now();
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>`;
+        
+        container.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = document.getElementById(toastId);
+        const bsToast = new bootstrap.Toast(toastElement, { delay: 4000 });
+        bsToast.show();
+
+        toastElement.addEventListener('hidden.bs.toast', () => {
+            toastElement.remove();
+        });
+    }
+    
+    // Auto-close alerts
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+    
+    // Initialize stats when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateSummaryStats();
+        filterProducts();
+    });
+
+    function getAiPriceAdvice(btn) {
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name');
+
+    // UI Feedback: Show loading spinner
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+    // The URL must match the @app.route exactly
+    fetch(`/api/ai/price_strategy/${id}`)
+        .then(response => {
+            if (!response.ok) {
+                // This catches 404 or 500 errors
+                throw new Error(`Server responded with ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+
+            const advice = `
+🤖 AI PRICING STRATEGY: ${name}
+----------------------------------
+Recommendation: ${data.recommendation}
+Suggested Price: ₹${data.new_price}
+
+Rationale: ${data.reason}
+            `;
+            alert(advice);
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            alert("AI Assistant Error: " + error.message);
+        })
+        .finally(() => {
+            // Restore button state
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        });
+}
+</script>
+{% endblock %}

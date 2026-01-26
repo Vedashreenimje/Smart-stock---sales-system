@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Navbar -->
+
+
+<!-- Flash Messages -->
+<div class="container-fluid">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+</div>
+
+<div class="container-fluid py-4 mb-3 border-bottom bg-white">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="display-5 fw-bold text-dark mb-1">🏠 Dashboard</h1>
+            <p class="text-muted mb-0">Welcome back! Here is what's happening with your store today.</p>
+        </div>
+        <div class="col-auto">
+            <span class="badge bg-soft-primary text-primary p-2">
+                <i class="bi bi-calendar3"></i> {{ today_date }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    {% set stats = [
+        ('Total Products', total_products, 'primary', '📦', false),
+        ('Low Stock Items', low_stock, 'warning', '⚠️', false),
+        ("Today's Sales", today_sales or 0, 'success', '💰', true),
+        ("Today's Profit", today_profit or 0, 'info', '📈', true)
+    ] %}
+    {% for title, value, color, icon, is_currency in stats %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-start border-4 border-{{ color }} shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="text-muted">{{ title }}</h6>
+                <h3 class="text-{{ color }}">
+                    {% if is_currency %}
+                        ₹{{ "%.2f"|format(value) }}
+                    {% else %}
+                        {{ value }}
+                    {% endif %}
+                </h3>
+                <small>{{ icon }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row">
+
+<!-- Left -->
+<div class="col-lg-8">
+
+<!-- Quick Actions -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        ⚡ Quick Actions
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <a href="/pos" class="btn btn-primary w-100 p-3">💰 New Sale</a>
+            </div>
+            <div class="col-md-6">
+                <a href="/products" class="btn btn-success w-100 p-3">📦 Manage Products</a>
+            </div>
+            <div class="col-md-6">
+                <button class="btn btn-info w-100 p-3" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    ➕ Add Product
+                </button>
+            </div>
+            <div class="col-md-6">
+                <a href="/reports" class="btn btn-warning w-100 p-3">📊 View Reports</a>
+            </div>
+            <div class="col-md-12">
+                <button onclick="runAiOptimization()" class="btn btn-dark w-100 p-3 shadow-sm border-0" style="background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);">
+                    🧠 Run AI Stock Optimization
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sales -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between">
+        🛒 Recent Sales
+        <button class="btn btn-sm btn-outline-secondary" onclick="loadRecentSales()">🔄 Refresh</button>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Invoice</th>
+                    <th>Time</th>
+                    <th>Items</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                </tr>
+            </thead>
+            <tbody id="recentSalesTable">
+                <tr>
+                    <td colspan="5" class="text-center text-muted">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+
+<!-- Right -->
+<div class="col-lg-4">
+
+<!-- Low Stock Alerts -->
+<div class="card shadow-sm border-warning mb-4">
+    <div class="card-header bg-warning text-white">
+        ⚠️ Low Stock Alerts
+    </div>
+    <div class="card-body">
+        {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert alert-warning small">
+                <strong>{{ alert.product_name }}</strong><br>
+                {{ alert.message }}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted text-center">✅ All stocks sufficient</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Products -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white">🏆 Top Selling Today</div>
+    <div class="card-body">
+        {% if top_products %}
+            {% for p in top_products %}
+            <div class="d-flex justify-content-between">
+                <span>{{ p.name }}</span>
+                <span class="badge bg-primary">{{ p.total_sold }}</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted text-center">No sales today</p>
+        {% endif %}
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal">
+    <div class="modal-dialog">
+        <form method="POST" action="/add_product" class="modal-content">
+            <div class="modal-header">
+                <h5>Add Product</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input name="name" class="form-control mb-2" placeholder="Product Name" required>
+                <select name=  "category_id" class="form-select mb-2" required>
+                    <option value="">Select Category</option>
+                    {% for c in get_categories() %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                <input name="purchase_price" type="number" class="form-control mb-2" placeholder="Cost Price" required>
+                <input name="selling_price" type="number" class="form-control mb-2" placeholder="Selling Price" required>
+                <input name="stock_quantity" type="number" class="form-control mb-2" value="10">
+                <input name="min_stock_level" type="number" class="form-control" value="5">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function loadRecentSales() {
+    fetch('/api/recent_sales')
+    .then(res => res.json())
+    .then(data => {
+        const tbody = document.getElementById('recentSalesTable');
+        tbody.innerHTML = '';
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No sales yet</td></tr>`;
+            return;
+        }
+        data.forEach(s => {
+            tbody.innerHTML += `
+            <tr>
+                <td>
+                    <a href="/receipt/${s.id}" target="_blank" class="text-decoration-none fw-bold">
+                        ${s.invoice_no || 'INV-'+s.id}
+                    </a>
+                </td>
+                <td>${new Date(s.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                <td>${s.item_count} items</td>
+                <td class="fw-bold">₹${parseFloat(s.total_amount).toFixed(2)}</td>
+                <td><span class="badge bg-light text-dark border">${s.payment_mode.toUpperCase()}</span></td>
+            </tr>`;
+        });
+    });
+}
+
+// 🔥 AI FEATURE SCRIPT: Handles the stock optimization request
+function runAiOptimization() {
+    if(confirm("AI will analyze your sales history from the last 30 days to set the most efficient minimum stock levels for your products. Proceed?")) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> AI Analyzing Trends...';
+
+        fetch('/api/ai/optimize_stock')
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || "Optimization Complete!");
+            location.reload(); // Refresh to update Low Stock Alerts
+        })
+        .catch(err => {
+            alert("Optimization failed: " + err);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadRecentSales);
+</script>
+
+{% endblock %}

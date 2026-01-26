@@ -1,0 +1,5 @@
+Flask
+Flask-MySQLdb
+groq
+gunicorn
+python-dotenv

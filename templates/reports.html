@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<div id="chartData" 
+     data-sales-labels='{{ sales_labels|tojson }}'
+     data-sales-values='{{ sales_values|tojson }}'
+     data-cat-labels='{{ cat_labels|tojson }}'
+     data-cat-values='{{ cat_values|tojson }}'
+     style="display: none;">
+</div>
+
+<div class="container-fluid py-4" id="contentToExport" style="background-color: #f8f9fa; min-height: 100vh;">
+    <div class="row mb-4 align-items-end">
+        <div class="col-lg-7">
+            <h1 class="display-6 fw-bold text-dark mb-1">Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Operational intelligence & real-time sales performance</p>
+        </div>
+        <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
+            <div class="btn-group shadow-sm bg-white p-1 rounded-3">
+                <button class="btn btn-light px-3 border-0" id="todayBtn">Today</button>
+                <button class="btn btn-light px-3 border-0" id="weekBtn">This Week</button>
+                <button class="btn btn-primary px-3 border-0 active" id="monthBtn">This Month</button>
+                <button class="btn btn-light px-3 border-0" id="customBtn">Custom</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" id="customDateRange" style="display: none; border-radius: 15px;">
+        <div class="card-body bg-white">
+            <div class="row align-items-center g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-uppercase text-muted">From Date</label>
+                    <input type="date" class="form-control form-control-lg border-0 bg-light" id="fromDate" value="{{ today_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-uppercase text-muted">To Date</label>
+                    <input type="date" class="form-control form-control-lg border-0 bg-light" id="toDate" value="{{ today_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                    <button class="btn btn-dark btn-lg w-100 fw-bold" id="applyDateRange">Apply</button>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="mt-4">
+                        <span class="badge bg-soft-primary text-primary px-3 py-2 rounded-pill">
+                            <i class="bi bi-calendar-check me-1"></i> <span id="dateRangeText">This Month</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted fw-bold small text-uppercase mb-2">Total Sales</p>
+                            <h2 class="fw-bold mb-1" id="stat-revenue">₹{{ today.revenue|default(0)|int }}</h2>
+                            <span class="badge bg-soft-success text-success" id="stat-transactions">{{ today.transactions|default(0) }} txns</span>
+                        </div>
+                        <div class="bg-soft-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <span class="fs-4">💰</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted fw-bold small text-uppercase mb-2">Total Products</p>
+                            <h2 class="fw-bold mb-1">{{ total_products|default(0) }}</h2>
+                            <span class="badge bg-soft-danger text-danger">{{ low_stock|length|default(0) }} low stock</span>
+                        </div>
+                        <div class="bg-soft-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <span class="fs-4">📦</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted fw-bold small text-uppercase mb-2">Avg. Sale</p>
+                            <h2 class="fw-bold mb-1" id="stat-avg">₹{{ avg_sale|default(0)|int }}</h2>
+                            <span class="text-muted small">Per transaction</span>
+                        </div>
+                        <div class="bg-soft-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <span class="fs-4">📊</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted fw-bold small text-uppercase mb-2">Profit Margin</p>
+                            <h2 class="fw-bold mb-1" id="stat-margin">{{ profit_margin|default(0)|int }}%</h2>
+                            <span class="badge bg-soft-info text-info">Estimated</span>
+                        </div>
+                        <div class="bg-soft-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <span class="fs-4">📈</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Sales Trend</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Top Selling Products</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="topProductsTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="border-0 px-4 py-3">Product</th>
+                                    <th class="border-0 py-3">Category</th>
+                                    <th class="border-0 py-3">Units</th>
+                                    <th class="border-0 py-3">Revenue</th>
+                                    <th class="border-0 px-4 py-3 text-end">Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topProductsBody">
+                                {% for product in top_products %}
+                                <tr>
+                                    <td class="px-4 py-3"><strong>{{ product.name }}</strong></td>
+                                    <td><span class="text-muted">{{ product.category_name or 'Uncategorized' }}</span></td>
+                                    <td><span class="badge rounded-pill bg-soft-primary text-primary px-3">{{ product.total_sold|default(0) }}</span></td>
+                                    <td class="fw-bold">₹{{ (product.total_sold|default(0) * product.selling_price|default(0))|int }}</td>
+                                    <td class="px-4 py-3 text-end">
+                                        <span class="text-success fw-bold">
+                                            ₹{{ ((product.total_sold|default(0) * product.selling_price|default(0)) - (product.total_sold|default(0) * product.purchase_price|default(0)))|int }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-5">No sales data yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4 bg-dark text-white" style="border-radius: 16px;">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">⚠️ Inventory Alerts</h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if low_stock %}
+                    <div class="list-group list-group-flush mb-3">
+                        {% for product in low_stock %}
+                        <div class="list-group-item bg-transparent text-white border-secondary px-0 py-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <span class="fw-bold">{{ product.name }}</span>
+                                <span class="badge bg-danger">{{ product.stock_quantity }} left</span>
+                            </div>
+                            <small class="text-secondary">Min Level: {{ product.min_stock_level }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="/products" class="btn btn-outline-light btn-sm w-100 py-2">Restock Inventory</a>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="display-4 mb-2">✅</div>
+                        <h6 class="fw-bold">Stocks Healthy</h6>
+                        <p class="small text-secondary mb-0">All items are above minimum levels</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+                <div class="card-header bg-white border-0 pt-4 px-4 text-center">
+                    <h5 class="fw-bold mb-0">Category Mix</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div style="height: 220px;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3">Export & Actions</h6>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button class="btn btn-light w-100 py-3 small fw-bold" id="exportPDF">
+                                <i class="bi bi-file-pdf text-danger d-block mb-1 fs-5"></i> PDF
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-light w-100 py-3 small fw-bold" id="exportExcel">
+                                <i class="bi bi-file-excel text-success d-block mb-1 fs-5"></i> Excel
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-light w-100 py-3 small fw-bold" id="printReport">
+                                <i class="bi bi-printer text-primary d-block mb-1 fs-5"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card border-0 shadow-sm mt-4" style="border-radius: 16px;">
+        <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0">Recent Transactions</h5>
+            <a href="/sales" class="btn btn-sm btn-link text-decoration-none fw-bold">View History →</a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0 px-4">Invoice</th>
+                            <th class="border-0">Timestamp</th>
+                            <th class="border-0">Volume</th>
+                            <th class="border-0">Total</th>
+                            <th class="border-0">Method</th>
+                            <th class="border-0 px-4 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentSales">
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Syncing recent sales...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body { background-color: #f8f9fa; font-family: 'Inter', -apple-system, sans-serif; }
+    .bg-soft-primary { background-color: rgba(13, 110, 253, 0.1); }
+    .bg-soft-success { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-soft-warning { background-color: rgba(255, 193, 7, 0.1); }
+    .bg-soft-info { background-color: rgba(13, 202, 240, 0.1); }
+    .bg-soft-danger { background-color: rgba(220, 53, 69, 0.1); }
+    .text-primary { color: #0d6efd !important; }
+    .text-success { color: #198754 !important; }
+    .chart-container { position: relative; height: 300px; width: 100%; }
+    .btn-group .btn.active { background-color: #0d6efd !important; color: white !important; font-weight: bold; }
+    .table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; font-weight: 700; }
+    @media print {
+        .btn-group, #customBtn, .btn, .card-header a, #customDateRange { display: none !important; }
+        body { background: white; }
+        .card { border: 1px solid #eee !important; box-shadow: none !important; }
+    }
+</style>
+
+<script>
+    let salesChart, categoryChart;
+
+    // Initialization
+    window.addEventListener('load', function() {
+        initializeCharts();
+        loadRecentSales();
+        // Initial load for "Month" (your default active button)
+        fetchAnalytics('month');
+    });
+
+    // Navigation Events
+    document.getElementById('todayBtn').addEventListener('click', function() { handleRangeChange(this, 'today', false); });
+    document.getElementById('weekBtn').addEventListener('click', function() { handleRangeChange(this, 'week', false); });
+    document.getElementById('monthBtn').addEventListener('click', function() { handleRangeChange(this, 'month', false); });
+    document.getElementById('customBtn').addEventListener('click', function() { 
+        setActiveButton(this);
+        document.getElementById('customDateRange').style.display = 'block';
+    });
+
+    document.getElementById('applyDateRange').addEventListener('click', function() {
+        const from = document.getElementById('fromDate').value;
+        const to = document.getElementById('toDate').value;
+        document.getElementById('dateRangeText').textContent = `${from} to ${to}`;
+        fetchAnalytics('custom', from, to);
+    });
+
+    function handleRangeChange(btn, range, showCustom) {
+        setActiveButton(btn);
+        document.getElementById('customDateRange').style.display = showCustom ? 'block' : 'none';
+        document.getElementById('dateRangeText').textContent = btn.textContent;
+        fetchAnalytics(range);
+    }
+
+    function setActiveButton(button) {
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+    }
+
+    // API Logic
+    function fetchAnalytics(range, start = null, end = null) {
+        let url = `/api/analytics?range=${range}`;
+        if(start && end) url += `&start=${start}&end=${end}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                updateDashboardStats(data.stats);
+                updateCharts(data.charts);
+                if(data.top_products) updateTopProductsTable(data.top_products);
+            })
+            .catch(err => console.error('Analytics Error:', err));
+    }
+
+    function updateDashboardStats(stats) {
+        if(!stats) return;
+        document.getElementById('stat-revenue').textContent = `₹${Math.round(stats.revenue)}`;
+        document.getElementById('stat-transactions').textContent = `${stats.transactions} txns`;
+        document.getElementById('stat-avg').textContent = `₹${Math.round(stats.avg_sale)}`;
+        document.getElementById('stat-margin').textContent = `${Math.round(stats.profit_margin)}%`;
+    }
+
+    function updateCharts(chartData) {
+        if(!chartData) return;
+        
+        // Update Sales Line Chart
+        salesChart.data.labels = chartData.sales.labels;
+        salesChart.data.datasets[0].data = chartData.sales.values;
+        salesChart.update();
+
+        // Update Category Doughnut
+        categoryChart.data.labels = chartData.categories.labels;
+        categoryChart.data.datasets[0].data = chartData.categories.values;
+        categoryChart.update();
+    }
+
+    function updateTopProductsTable(products) {
+        const tbody = document.getElementById('topProductsBody');
+        tbody.innerHTML = products.map(p => `
+            <tr>
+                <td class="px-4 py-3"><strong>${p.name}</strong></td>
+                <td><span class="text-muted">${p.category_name || 'Uncategorized'}</span></td>
+                <td><span class="badge rounded-pill bg-soft-primary text-primary px-3">${p.total_sold}</span></td>
+                <td class="fw-bold">₹${Math.round(p.total_sold * p.selling_price)}</td>
+                <td class="px-4 py-3 text-end">
+                    <span class="text-success fw-bold">₹${Math.round((p.total_sold * p.selling_price) - (p.total_sold * p.purchase_price))}</span>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="5" class="text-center py-5">No sales data</td></tr>';
+    }
+
+    function loadRecentSales() {
+        fetch('/api/recent_sales')
+            .then(res => res.json())
+            .then(data => {
+                const tableBody = document.getElementById('recentSales');
+                tableBody.innerHTML = data.length ? '' : '<tr><td colspan="6" class="text-center py-5">No sales recorded</td></tr>';
+                data.forEach(sale => {
+                    const row = document.createElement('tr');
+                    const date = new Date(sale.created_at).toLocaleString([], {dateStyle:'short', timeStyle:'short'});
+                    row.innerHTML = `
+                        <td class="px-4"><span class="badge bg-light text-dark border">${sale.invoice_no}</span></td>
+                        <td>${date}</td>
+                        <td>${sale.item_count || 0} items</td>
+                        <td class="fw-bold text-dark">₹${parseFloat(sale.total_amount).toFixed(2)}</td>
+                        <td><span class="small fw-bold text-uppercase">${sale.payment_mode}</span></td>
+                        <td class="text-end px-4"><button class="btn btn-sm btn-dark" onclick="window.open('/receipt/${sale.id}', '_blank')">View</button></td>`;
+                    tableBody.appendChild(row);
+                });
+            });
+    }
+
+    function initializeCharts() {
+        const dataEl = document.getElementById('chartData');
+        const salesLabels = JSON.parse(dataEl.getAttribute('data-sales-labels') || '[]');
+        const salesValues = JSON.parse(dataEl.getAttribute('data-sales-values') || '[]');
+        const catLabels = JSON.parse(dataEl.getAttribute('data-cat-labels') || '[]');
+        const catValues = JSON.parse(dataEl.getAttribute('data-cat-values') || '[]');
+
+        salesChart = new Chart(document.getElementById('salesChart'), {
+            type: 'line',
+            data: {
+                labels: salesLabels,
+                datasets: [{
+                    label: 'Sales (₹)',
+                    data: salesValues,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.05)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fff'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        categoryChart = new Chart(document.getElementById('categoryChart'), {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catValues,
+                    backgroundColor: ['#0d6efd', '#20c997', '#6610f2', '#fd7e14', '#adb5bd'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // Export Logic
+    document.getElementById('exportPDF').addEventListener('click', () => {
+        html2pdf().set({ margin:0.2, filename:'Report.pdf', html2canvas:{scale:2}, jsPDF:{format:'letter'} })
+                 .from(document.getElementById('contentToExport')).save();
+    });
+
+    document.getElementById('exportExcel').addEventListener('click', () => {
+        let csv = Array.from(document.querySelectorAll('#topProductsTable tr'))
+                       .map(row => Array.from(row.querySelectorAll('th, td')).map(cell => `"${cell.innerText}"`).join(','))
+                       .join('\n');
+        const link = document.createElement("a");
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = "Report.csv";
+        link.click();
+    });
+
+    document.getElementById('printReport').addEventListener('click', () => window.print());
+    setInterval(loadRecentSales, 60000);
+</script>
+{% endblock %}

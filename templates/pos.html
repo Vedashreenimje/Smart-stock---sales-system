@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between mb-4">
+        <div>
+            <h2>💰 Point of Sale</h2>
+            <p class="text-muted">Process customer purchases</p>
+        </div>
+        <div>
+            <span class="badge bg-info fs-6">{{ next_invoice }}</span>
+            <small class="text-muted d-block text-end">Next Invoice</small>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="input-group mb-3 shadow-sm">
+                <span class="input-group-text bg-white border-end-0">🔍</span>
+                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search product by name or category...">
+            </div>
+
+            <div class="row" id="productsGrid">
+                </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">🛒 Current Order</h5>
+                    <button class="btn btn-sm btn-light" onclick="clearCart()">Clear</button>
+                </div>
+                <div class="card-body p-0">
+                    <div style="min-height: 300px; max-height: 500px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <tbody id="cartItems">
+                                <tr id="emptyCartMessage">
+                                    <td class="text-muted text-center py-5">
+                                        <div class="fs-1">🛍️</div>
+                                        Cart is empty
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-3 bg-light border-top">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal</span>
+                            <span>₹<span id="subtotal">0.00</span></span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 fw-bold fs-5">
+                            <span>Total</span>
+                            <span class="text-success">₹<span id="total">0.00</span></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label d-block small text-muted">Payment Mode</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="paymentMode" id="cash" value="cash" checked>
+                                <label class="btn btn-outline-secondary" for="cash">Cash</label>
+
+                                <input type="radio" class="btn-check" name="paymentMode" id="card" value="card">
+                                <label class="btn btn-outline-secondary" for="card">Card</label>
+
+                                <input type="radio" class="btn-check" name="paymentMode" id="upi" value="upi">
+                                <label class="btn btn-outline-secondary" for="upi">UPI</label>
+                            </div>
+                        </div>
+
+                        <button id="checkoutBtn" class="btn btn-success w-100 py-2 fs-5 shadow-sm" disabled>
+                            ✅ Complete Sale
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Injected from Flask
+    window.ALL_PRODUCTS = {{ products | tojson | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+{% endblock %}
