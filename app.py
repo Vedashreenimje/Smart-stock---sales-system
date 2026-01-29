@@ -2,6 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from groq import Groq
 import json
 from datetime import datetime  
+
+# 🔧 RAILWAY FIX: Use PyMySQL instead of native MySQL driver
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from flask_mysqldb import MySQL
 from config import Config
 from dotenv import load_dotenv
