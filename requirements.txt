@@ -1,5 +1,6 @@
-Flask
-Flask-MySQLdb
-groq
-gunicorn
-python-dotenv
+Flask==2.3.3
+gunicorn==21.2.0
+groq==0.6.0
+python-dotenv==1.0.0
+pymysql==1.1.0
+flask-mysqldb==1.0.1
