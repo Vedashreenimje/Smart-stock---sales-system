@@ -10,10 +10,10 @@ class Config:
     # Change 'root' below to your actual local XAMPP password if it's different
     MYSQL_PASSWORD = os.getenv('MYSQLPASSWORD', 'root') 
     MYSQL_DB = os.getenv('MYSQLDATABASE', 'smart_stock')
-    MYSQL_PORT = int(os.getenv('MYSQLPORT', 3306))
+    MYSQL_PORT = int(os.getenv('MYSQLPORT') or 3306)
     
     MYSQL_CURSORCLASS = 'DictCursor'
-    
+    UPLOAD_FOLDER = 'uploads'
     
     @staticmethod
     def init_app(app):
