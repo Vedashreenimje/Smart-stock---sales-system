@@ -525,15 +525,14 @@ def reports():
     
     # 4. FIX: Top selling products (Added all selected columns to GROUP BY)
     cursor.execute("""
-        SELECT p.name, p.selling_price, p.purchase_price, ANY_VALUE(c.name) as category_name,
+        SELECT p.name, p.selling_price, p.purchase_price, 
                COALESCE(SUM(si.quantity), 0) as total_sold
         FROM products p
-        LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN sale_items si ON p.id = si.product_id
-        LEFT JOIN sales s ON si.sale_id = s.id AND s.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        LEFT JOIN sales s ON si.sale_id = s.id 
+             AND s.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         GROUP BY p.id, p.name, p.selling_price, p.purchase_price
-        ORDER BY total_sold DESC
-        LIMIT 5
+        ORDER BY total_sold DESC LIMIT 5
     """)
     top_products = cursor.fetchall()
 
